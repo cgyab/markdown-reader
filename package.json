@@ -15,9 +15,9 @@
     "icons": "node scripts/build-icons.mjs"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
-    "esbuild": "^0.25.0",
-    "typescript": "^5.8.0",
+    "@types/node": "^26.4.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
     "vite": "^6.3.0"
   }
 }
