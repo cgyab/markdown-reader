@@ -511,6 +511,11 @@ Dependabot proposes toolchain updates weekly, grouped into one pull request,
 plus updates to the actions themselves. Since nothing here ships at runtime, a
 green CI run is the whole review for a dependency bump.
 
+Major Vite updates are excluded: Vite 7 and later require Node 20.19+, so
+taking one is a decision about the supported Node range rather than a routine
+bump. Raise the floor in the matrix and in Requirements above, then update Vite
+deliberately.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
