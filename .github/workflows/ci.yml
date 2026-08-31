@@ -22,7 +22,7 @@ jobs:
         # directory argument, which only this matrix would have caught.
         node: ["18", "20", "22", "24"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
@@ -42,7 +42,7 @@ jobs:
     name: Browser verification
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v5
         with:
