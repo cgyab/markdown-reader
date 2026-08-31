@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="A small offline reader for Markdown documents." />
+    <meta name="theme-color" content="#121212" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+    <link rel="icon" href="./icons/icon-192.png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+    <title>Markdown Reader</title>
+  </head>
+  <body>
+    <header class="app-bar">
+      <button id="open-button" type="button" class="action">Open Markdown</button>
+      <span id="filename" class="filename" aria-live="polite"></span>
+      <button id="print-button" type="button" class="action" disabled>Print</button>
+    </header>
+
+    <main id="main" class="page">
+      <p id="error" class="error" role="alert" hidden></p>
+
+      <section id="empty-state" class="empty">
+        <h1>Markdown Reader</h1>
+        <p>Open a <code>.md</code> or <code>.markdown</code> file to read it here.</p>
+        <p class="empty-note">
+          Files stay on this device. Nothing is uploaded. On Android you can also share a Markdown
+          file to this app.
+        </p>
+      </section>
+
+      <div id="document-view" class="document" hidden></div>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

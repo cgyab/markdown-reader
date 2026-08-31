@@ -1,0 +1,93 @@
+# Markdown Reader — Apache configuration for static hosting.
+#
+# Upload the contents of dist/ (including this file) to the directory the site
+# serves. The application is entirely static: there is no PHP, no database and
+# nothing to configure server-side.
+#
+# Everything here is defensive: correct MIME types, cache rules that let a new
+# build take effect, and response headers that constrain what the page is
+# allowed to do.
+
+Options -Indexes
+
+# ---------------------------------------------------------------- HTTPS only
+# A service worker and the Android share target both require a secure context.
+# A host may already force HTTPS; this makes it explicit either way.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+  # The share target is normally answered by the service worker and never
+  # reaches Apache. If it does — the worker was evicted, or the app is not
+  # installed — send the reader to its own error state instead of a 404.
+  #
+  # The substitution must be root-absolute. In a per-directory context (which
+  # .htaccess always is) mod_rewrite expands a relative substitution against the
+  # filesystem path, producing a redirect to something like
+  # https://example.com/home/user/example.com/ — broken, and a disclosure of the
+  # server's directory layout.
+  RewriteCond %{REQUEST_METHOD} =POST
+  RewriteRule ^share-target/?$ /?shared=unavailable [R=303,L]
+</IfModule>
+
+# --------------------------------------------------------------- MIME types
+<IfModule mod_mime.c>
+  AddType application/manifest+json .webmanifest
+  AddType text/javascript .js
+  AddType text/markdown .md .markdown
+  AddCharset utf-8 .html .css .js .webmanifest .md .markdown
+</IfModule>
+
+# ------------------------------------------------------------------ Caching
+# Asset filenames carry a content hash, so they can be cached hard. The entry
+# points must not be, or a deploy would never reach an existing visitor.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(html|webmanifest)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+
+  # A stale service worker would keep serving a stale application shell.
+  <Files "sw.js">
+    Header set Cache-Control "no-cache, must-revalidate"
+    Header set Service-Worker-Allowed "/"
+  </Files>
+
+  <FilesMatch "\-[A-Za-z0-9_-]{8,}\.(js|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+
+  # Icons keep fixed filenames, so they must never be cached hard. Their URLs
+  # carry a ?v= content hash, which is what actually busts a cached copy; the
+  # short max-age only bounds how long a request without one can go stale.
+  <FilesMatch "\.(png|svg|ico|woff2?)$">
+    Header set Cache-Control "public, max-age=86400, must-revalidate"
+  </FilesMatch>
+
+# ---------------------------------------------------------- Security headers
+  # The reader loads no third-party code and talks to no API. The only thing a
+  # document may pull from the network is an image, so that is the only remote
+  # source allowed. No inline script or style is used anywhere.
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; media-src 'none'; object-src 'none'; frame-src 'none'; child-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "no-referrer"
+  Header always set Cross-Origin-Opener-Policy "same-origin"
+  Header always set Cross-Origin-Resource-Policy "same-origin"
+  Header always set Permissions-Policy "accelerometer=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), interest-cohort=(), microphone=(), payment=(), usb=()"
+
+  # HSTS applies to the whole host, not just this directory. Six months, no
+  # preload: remove this line if the domain serves anything over plain HTTP.
+  Header always set Strict-Transport-Security "max-age=15552000"
+
+  # Nothing here is a document to be downloaded or embedded elsewhere.
+  Header unset X-Powered-By
+</IfModule>
+
+# --------------------------------------------------------------- Compression
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/manifest+json image/svg+xml
+</IfModule>
