@@ -1,0 +1,24 @@
+# Dependency updates.
+#
+# Everything this project depends on is build-time only — there are no runtime
+# dependencies to ship — so the npm updates are grouped into a single weekly
+# pull request rather than one per package. CI builds and tests each one, which
+# is the check that matters for a toolchain bump.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      toolchain:
+        patterns:
+          - "*"
+
+  # Keep the actions used by the workflow below current, including security
+  # fixes to the actions themselves.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

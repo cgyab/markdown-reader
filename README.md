@@ -1,5 +1,7 @@
 # Markdown Reader
 
+[![CI](https://github.com/cgyab/markdown-reader/actions/workflows/ci.yml/badge.svg)](https://github.com/cgyab/markdown-reader/actions/workflows/ci.yml)
+
 A small, offline-capable reader for Markdown documents. Open a `.md` or
 `.markdown` file, read it, print it. It installs as a PWA and registers itself
 as an Android share target, so a Markdown file can be shared to it from a file
@@ -492,6 +494,22 @@ Node's built-in test runner — no test framework is installed. Four suites:
 
 `npm run verify` adds the browser-level checks described under
 [Verification](#verification).
+
+### Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request to `main`:
+
+- **Build and test** on Node 18, 20 and 22 — `npm ci`, then `npm run build`
+  (which type-checks the app and the service worker separately), then
+  `npm test`. The build runs first so the two tests that inspect `dist/`
+  execute rather than skipping.
+- **Browser verification** — the same production build driven through Chrome by
+  `npm run verify`, covering the service worker, the share target, offline
+  loading, print CSS and the Content-Security-Policy.
+
+Dependabot proposes toolchain updates weekly, grouped into one pull request,
+plus updates to the actions themselves. Since nothing here ships at runtime, a
+green CI run is the whole review for a dependency bump.
 
 ## License
 

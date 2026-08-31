@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Nothing here needs to write to the repository.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 18 is the floor the README claims; the rest are current LTS lines.
+        node: ["18", "20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      # Build first: two tests inspect dist/ and skip themselves without one.
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
+
+  verify:
+    name: Browser verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - name: Locate Chrome
+        run: |
+          chrome="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium-browser || true)"
+          if [ -z "$chrome" ]; then
+            echo "No Chrome on this runner; the browser checks cannot run." >&2
+            exit 1
+          fi
+          echo "CHROME_PATH=$chrome" >> "$GITHUB_ENV"
+
+      # Drives the browser checks. Deliberately not a project dependency: the
+      # application itself has none, and this is only needed here.
+      - name: Install browser driver
+        run: npm install --no-save puppeteer-core
+
+      # Service worker, share target, offline, print CSS and the CSP — none of
+      # which a unit test can reach.
+      - name: Verify against a production build
+        run: npm run verify
