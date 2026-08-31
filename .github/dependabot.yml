@@ -15,14 +15,6 @@ updates:
       toolchain:
         patterns:
           - "*"
-    ignore:
-      # Vite 7 and later require Node 20.19+, and this project supports Node 18
-      # — a floor the CI matrix enforces and the README states. A major Vite
-      # bump is therefore a decision about the supported Node range, not a
-      # routine update, so it should not arrive as an automatic pull request.
-      # Revisit this together with the Node floor.
-      - dependency-name: vite
-        update-types: ["version-update:semver-major"]
 
   # Keep the actions used by the workflow below current, including security
   # fixes to the actions themselves.

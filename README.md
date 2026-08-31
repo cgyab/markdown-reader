@@ -14,8 +14,7 @@ backend, no account, no storage of your files.
 
 ## Requirements
 
-Node 18 or newer. The toolchain is pinned to Vite 6, which supports Node 18;
-Vite 7 requires Node 20.19+.
+Node 20.19+ or 22.12+, which is what Vite 8 requires.
 
 ## Commands
 
@@ -499,7 +498,7 @@ Node's built-in test runner — no test framework is installed. Four suites:
 
 `.github/workflows/ci.yml` runs on every push and pull request to `main`:
 
-- **Build and test** on Node 18, 20 and 22 — `npm ci`, then `npm run build`
+- **Build and test** on Node 20.19, 22 and 24 — `npm ci`, then `npm run build`
   (which type-checks the app and the service worker separately), then
   `npm test`. The build runs first so the two tests that inspect `dist/`
   execute rather than skipping.
@@ -511,10 +510,6 @@ Dependabot proposes toolchain updates weekly, grouped into one pull request,
 plus updates to the actions themselves. Since nothing here ships at runtime, a
 green CI run is the whole review for a dependency bump.
 
-Major Vite updates are excluded: Vite 7 and later require Node 20.19+, so
-taking one is a decision about the supported Node range rather than a routine
-bump. Raise the floor in the matrix and in Requirements above, then update Vite
-deliberately.
 
 ## License
 

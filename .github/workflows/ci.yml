@@ -17,10 +17,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # 18 is the floor the README claims; the rest are current LTS lines.
-        # The spread earns its keep: Node 22 changed how `node --test` treats a
-        # directory argument, which only this matrix would have caught.
-        node: ["18", "20", "22", "24"]
+        # The floor the README claims, then the current LTS lines. The spread
+        # earns its keep: Node 22 changed how `node --test` treats a directory
+        # argument, which only this matrix would have caught.
+        node: ["20.19", "22", "24"]
     steps:
       - uses: actions/checkout@v7
 
