@@ -35,5 +35,19 @@ await build({
   outExtension: { ".js": ".mjs" },
 });
 
-const result = spawnSync(process.execPath, ["--test", OUT_DIR], { stdio: "inherit" });
+// Pass the built files individually rather than the directory holding them.
+// Node 18 and 20 search a directory argument for tests; Node 22 changed that to
+// treat the argument as a file to load, which fails with MODULE_NOT_FOUND. An
+// explicit list behaves the same on every version.
+const built = readdirSync(OUT_DIR)
+  .filter((file) => file.endsWith(".mjs"))
+  .map((file) => join(OUT_DIR, file))
+  .sort();
+
+if (built.length !== entryPoints.length) {
+  console.error(`Expected ${entryPoints.length} bundled test files, found ${built.length}`);
+  process.exit(1);
+}
+
+const result = spawnSync(process.execPath, ["--test", ...built], { stdio: "inherit" });
 process.exit(result.status ?? 1);

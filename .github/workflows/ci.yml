@@ -18,11 +18,13 @@ jobs:
       fail-fast: false
       matrix:
         # 18 is the floor the README claims; the rest are current LTS lines.
-        node: ["18", "20", "22"]
+        # The spread earns its keep: Node 22 changed how `node --test` treats a
+        # directory argument, which only this matrix would have caught.
+        node: ["18", "20", "22", "24"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
           cache: npm
@@ -40,9 +42,9 @@ jobs:
     name: Browser verification
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: "22"
           cache: npm
