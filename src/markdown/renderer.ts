@@ -12,6 +12,7 @@
  */
 
 import type { Block, InlineNode, ParsedDocument } from "./ast.js";
+import { inlineText } from "./inline.js";
 import { isExternal } from "./url.js";
 
 export interface ElementLike {
@@ -34,20 +35,53 @@ export function browserDom(doc: Document): DomLike {
 
 export function renderDocument(dom: DomLike, parsed: ParsedDocument): ElementLike {
   const root = dom.createElement("article");
-  appendBlocks(dom, root, parsed.blocks);
+  appendBlocks(dom, root, parsed.blocks, new Map());
   return root;
 }
 
-function appendBlocks(dom: DomLike, parent: ElementLike, blocks: Block[]): void {
+function appendBlocks(
+  dom: DomLike,
+  parent: ElementLike,
+  blocks: Block[],
+  anchors: AnchorNames,
+): void {
   for (const block of blocks) {
-    parent.appendChild(renderBlock(dom, block));
+    parent.appendChild(renderBlock(dom, block, anchors));
   }
 }
 
-function renderBlock(dom: DomLike, block: Block): ElementLike {
+/** Anchor slugs already used in this document, so repeats can be numbered. */
+type AnchorNames = Map<string, number>;
+
+/**
+ * The anchor a heading is reachable by, matching what authors expect when they
+ * hand-write `[see](#some-heading)`: lower case, punctuation dropped, spaces
+ * hyphenated — the convention GitHub established.
+ *
+ * Only letters, digits, hyphens and underscores survive, so a heading cannot
+ * put anything surprising into an attribute.
+ */
+function anchorFor(text: string, used: AnchorNames): string {
+  const base =
+    text
+      .trim()
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s_-]/gu, "")
+      .replace(/\s+/g, "-") || "section";
+
+  // A document may repeat a heading; the second one gets `-1`, as GitHub does.
+  const seen = used.get(base) ?? 0;
+  used.set(base, seen + 1);
+  return seen === 0 ? base : `${base}-${seen}`;
+}
+
+function renderBlock(dom: DomLike, block: Block, anchors: AnchorNames): ElementLike {
   switch (block.type) {
     case "heading": {
       const element = dom.createElement(`h${block.level}`);
+      // The link half of this already worked: `#fragment` destinations pass
+      // the URL filter untouched. Without an id to land on they went nowhere.
+      element.setAttribute("id", anchorFor(inlineText(block.inline), anchors));
       appendInline(dom, element, block.inline);
       return element;
     }
@@ -66,19 +100,23 @@ function renderBlock(dom: DomLike, block: Block): ElementLike {
     }
     case "blockquote": {
       const element = dom.createElement("blockquote");
-      appendBlocks(dom, element, block.blocks);
+      appendBlocks(dom, element, block.blocks, anchors);
       return element;
     }
     case "rule":
       return dom.createElement("hr");
     case "list":
-      return renderList(dom, block);
+      return renderList(dom, block, anchors);
     case "table":
       return renderTable(dom, block);
   }
 }
 
-function renderList(dom: DomLike, block: Extract<Block, { type: "list" }>): ElementLike {
+function renderList(
+  dom: DomLike,
+  block: Extract<Block, { type: "list" }>,
+  anchors: AnchorNames,
+): ElementLike {
   const list = dom.createElement(block.ordered ? "ol" : "ul");
   if (block.ordered && block.start !== 1) list.setAttribute("start", String(block.start));
 
@@ -103,10 +141,10 @@ function renderList(dom: DomLike, block: Extract<Block, { type: "list" }>): Elem
     if (block.tight) {
       for (const child of item.blocks) {
         if (child.type === "paragraph") appendInline(dom, li, child.inline);
-        else li.appendChild(renderBlock(dom, child));
+        else li.appendChild(renderBlock(dom, child, anchors));
       }
     } else {
-      appendBlocks(dom, li, item.blocks);
+      appendBlocks(dom, li, item.blocks, anchors);
     }
 
     list.appendChild(li);

@@ -16,26 +16,34 @@ const SAFE_SCHEMES = new Set(["http", "https", "mailto", "tel"]);
 const SAFE_DATA_IMAGE = /^data:image\/(png|jpeg|jpg|gif|webp|avif);/i;
 
 /**
- * Whitespace and control characters are stripped before the scheme test,
- * because browsers ignore them inside a scheme: `java\nscript:alert(1)`
- * navigates just fine.
+ * A copy of the URL with whitespace and control characters removed, used *only*
+ * to decide what scheme it has: browsers ignore those characters inside one, so
+ * `java\nscript:alert(1)` navigates just fine and has to be judged as
+ * `javascript:`.
+ *
+ * The stripped copy is never what gets returned. Doing that mangled legitimate
+ * URLs — `<#My Section>` lost its space and pointed at nothing — for no gain,
+ * since the obfuscation this defends against is entirely about the scheme.
  */
-function normalise(raw: string): string {
+function schemeProbe(raw: string): string {
   return raw.replace(/[\u0000-\u0020\u007f]/g, "");
 }
 
 export function safeLinkUrl(raw: string): string | null {
-  const url = normalise(raw);
-  if (url === "") return null;
-  const scheme = SCHEME.exec(url);
-  if (!scheme) return url; // relative path, query or fragment
+  const url = raw.trim();
+  const probe = schemeProbe(url);
+  if (probe === "") return null;
+
+  const scheme = SCHEME.exec(probe);
+  if (!scheme) return url; // relative path, query or fragment, returned intact
   return SAFE_SCHEMES.has(scheme[1].toLowerCase()) ? url : null;
 }
 
 export function safeImageUrl(raw: string): string | null {
-  const url = normalise(raw);
-  if (url === "") return null;
-  if (SAFE_DATA_IMAGE.test(url)) return url;
+  const url = raw.trim();
+  const probe = schemeProbe(url);
+  if (probe === "") return null;
+  if (SAFE_DATA_IMAGE.test(probe)) return url;
   return safeLinkUrl(url);
 }
 

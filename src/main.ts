@@ -21,18 +21,23 @@ const APP_NAME = "Markdown Reader";
 /** A heading is document-controlled, so it does not get to be a novel. */
 const MAX_TITLE_LENGTH = 120;
 
-const openButton = requireElement<HTMLButtonElement>("open-button");
-const printButton = requireElement<HTMLButtonElement>("print-button");
-const filenameLabel = requireElement<HTMLElement>("filename");
-const emptyState = requireElement<HTMLElement>("empty-state");
-const errorBanner = requireElement<HTMLElement>("error");
-const documentView = requireElement<HTMLElement>("document-view");
+const openButton = requireElement<HTMLButtonElement>("app-open");
+const printButton = requireElement<HTMLButtonElement>("app-print");
+const filenameLabel = requireElement<HTMLElement>("app-filename");
+const emptyState = requireElement<HTMLElement>("app-empty");
+const errorBanner = requireElement<HTMLElement>("app-error");
+const documentView = requireElement<HTMLElement>("app-document");
 
 const dom = browserDom(document);
 
 /** The loaded source is kept intact, ready for a future editor. */
 let current: MarkdownDocument | null = null;
 
+/**
+ * The application's own ids are prefixed, because a document's headings now
+ * claim bare slugs: a document with an "Error" heading would otherwise collide
+ * with the error banner, and `#error` would scroll to the wrong thing.
+ */
 function requireElement<T extends HTMLElement>(id: string): T {
   const element = document.getElementById(id);
   if (!element) throw new Error(`Missing element: ${id}`);

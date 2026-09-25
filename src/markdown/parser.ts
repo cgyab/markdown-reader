@@ -9,7 +9,7 @@
  */
 
 import type { Align, Block, InlineNode, ListItem, ParsedDocument } from "./ast.js";
-import { parseInline, plainText } from "./inline.js";
+import { inlineText, parseInline, plainText } from "./inline.js";
 
 // No lazy quantifiers here: every pattern in this file has to stay linear in
 // the length of a line, because documents are untrusted input.
@@ -90,19 +90,8 @@ function normalise(source: string): string[] {
 export function parseMarkdown(source: string): ParsedDocument {
   const blocks = parseBlocks(normalise(source));
   const heading = blocks.find((block) => block.type === "heading" && block.level === 1);
-  const title = heading && heading.type === "heading" ? inlineText(heading.inline) : null;
+  const title = heading && heading.type === "heading" ? inlineText(heading.inline).trim() : null;
   return { blocks, title };
-}
-
-function inlineText(nodes: InlineNode[]): string {
-  let text = "";
-  for (const node of nodes) {
-    if (node.type === "text" || node.type === "codespan") text += node.value;
-    else if (node.type === "image") text += node.alt;
-    else if (node.type === "break") text += " ";
-    else text += inlineText(node.children);
-  }
-  return text.trim();
 }
 
 export function parseBlocks(lines: string[], depth = 0): Block[] {

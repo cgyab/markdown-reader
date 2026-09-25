@@ -35,7 +35,7 @@ const ALLOWED_TAGS = new Set([
 
 const ALLOWED_ATTRIBUTES = new Set([
   "href", "src", "alt", "title", "class", "type", "disabled", "checked",
-  "aria-label", "loading", "data-lang", "start", "target", "rel",
+  "aria-label", "loading", "data-lang", "start", "target", "rel", "id",
 ]);
 
 /** Asserts that a document produced nothing that can execute or navigate badly. */
@@ -180,6 +180,38 @@ test("nothing can break out of an attribute", () => {
 test("external links are opened without handing over the opener", () => {
   const markup = render("[x](https://example.com)");
   assert.ok(markup.includes('rel="noopener noreferrer"'));
+});
+
+test("a heading cannot put anything surprising in its anchor", () => {
+  const nasty = [
+    '## " onmouseover="alert(1)',
+    "## <script>alert(1)</script>",
+    "## javascript:alert(1)",
+    "## ../../etc/passwd",
+    "## " + "x".repeat(300),
+  ];
+
+  for (const vector of nasty) {
+    assertInert(vector, vector);
+    for (const [, name, value] of attributesOf(renderDocument(fakeDom, parseMarkdown(vector)))) {
+      if (name !== "id") continue;
+      // Slugging leaves only letters, digits, hyphens and underscores, so no
+      // quote, angle bracket or colon can reach the attribute.
+      assert.match(value, /^[\p{L}\p{N}_-]+$/u, `anchor ${value} from: ${vector}`);
+    }
+  }
+});
+
+test("a URL keeps its own characters once the scheme is judged safe", () => {
+  // The scheme test strips whitespace because browsers ignore it inside one.
+  // That must not reach the value: `#My Section` is a legitimate fragment.
+  assert.equal(safeLinkUrl("#My Section"), "#My Section");
+  assert.equal(safeLinkUrl("  #trimmed  "), "#trimmed");
+  assert.equal(safeLinkUrl("./a file.md"), "./a file.md");
+  // And the defence it exists for still holds.
+  assert.equal(safeLinkUrl("java\nscript:alert(1)"), null);
+  assert.equal(safeLinkUrl("java\tscript:alert(1)"), null);
+  assert.equal(safeLinkUrl("\u0000javascript:alert(1)"), null);
 });
 
 test("filenames are reduced to a plain name", () => {

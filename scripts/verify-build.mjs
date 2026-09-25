@@ -105,8 +105,8 @@ try {
     return { scope: registration.scope, state: registration.active?.state ?? null };
   });
   check("service worker activates", worker.state === "activated", worker.scope);
-  check("empty state is shown", await page.$eval("#empty-state", (el) => !el.hidden));
-  check("print is disabled with no document", await page.$eval("#print-button", (b) => b.disabled));
+  check("empty state is shown", await page.$eval("#app-empty", (el) => !el.hidden));
+  check("print is disabled with no document", await page.$eval("#app-print", (b) => b.disabled));
 
   // ------------------------------------------------------------ open a file
   // Headless Chrome implements showOpenFilePicker, whose native dialog cannot
@@ -117,14 +117,14 @@ try {
   });
   const [chooser] = await Promise.all([
     page.waitForFileChooser({ timeout: 10_000 }),
-    page.click("#open-button"),
+    page.click("#app-open"),
   ]);
   check("picker takes a single file", chooser.isMultiple() === false);
   await chooser.accept([FIXTURE]);
-  await page.waitForSelector("#document-view article h1", { timeout: 15_000 });
+  await page.waitForSelector("#app-document article h1", { timeout: 15_000 });
 
   const rendered = await page.evaluate(() => {
-    const view = document.getElementById("document-view");
+    const view = document.getElementById("app-document");
     return {
       headings: view.querySelectorAll("h1,h2,h3").length,
       tables: view.querySelectorAll("table").length,
@@ -142,7 +142,7 @@ try {
       opener: [...view.querySelectorAll('a[target="_blank"]')].every((a) =>
         (a.rel || "").includes("noopener"),
       ),
-      filename: document.getElementById("filename").textContent,
+      filename: document.getElementById("app-filename").textContent,
     };
   });
   check("TEST.md renders", rendered.headings > 50, `${rendered.headings} headings`);
@@ -155,11 +155,42 @@ try {
   check("external links carry noopener", rendered.opener);
   check("filename is shown", rendered.filename === "TEST.md", rendered.filename);
 
+  // ------------------------------------------------------- in-document links
+  // The link half always worked; the anchors it lands on are new. Clicking one
+  // is the only way to prove the slug, the id and the scroll offset agree.
+  const jumped = await page.evaluate(async () => {
+    const link = document.querySelector('#app-document a[href^="#"]');
+    if (!link) return { error: "no in-document link in the fixture" };
+
+    const id = link.getAttribute("href").slice(1);
+    link.click();
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    const target = document.getElementById(id);
+    return {
+      id,
+      hash: location.hash,
+      found: target !== null,
+      scrolled: window.scrollY > 0,
+      // Clear of the sticky bar, thanks to scroll-margin-top.
+      top: target ? Math.round(target.getBoundingClientRect().top) : null,
+      barBottom: Math.round(document.querySelector(".app-bar").getBoundingClientRect().bottom),
+    };
+  });
+  check("an in-document link finds its heading", jumped.found === true, jumped.error ?? jumped.id);
+  check("clicking it scrolls the page", jumped.scrolled === true);
+  check("the URL carries the fragment", jumped.hash === `#${jumped.id}`, jumped.hash);
+  check(
+    "the heading clears the sticky bar",
+    jumped.top !== null && jumped.top >= jumped.barBottom,
+    `heading at ${jumped.top}, bar ends at ${jumped.barBottom}`,
+  );
+
   // ---------------------------------------------------------------- print
   await page.emulateMediaType("print");
   const printed = await page.evaluate(() => ({
     bar: getComputedStyle(document.querySelector(".app-bar")).display,
-    document: getComputedStyle(document.getElementById("document-view")).display,
+    document: getComputedStyle(document.getElementById("app-document")).display,
   }));
   check("print CSS hides the app bar", printed.bar === "none");
   check("print CSS keeps the document", printed.document !== "none");
@@ -195,13 +226,13 @@ try {
   check("traversal filename is flattened", shared.traversal === "passwd.md", shared.traversal);
 
   await page.goto(`${BASE}?shared=ok`, { waitUntil: "networkidle0" });
-  await page.waitForSelector("#document-view article h1", { timeout: 15_000 });
+  await page.waitForSelector("#app-document article h1", { timeout: 15_000 });
   const collected = await page.evaluate(async () => {
     const cache = await caches.open("shared-document");
     return {
-      heading: document.querySelector("#document-view h1")?.textContent,
-      strong: document.querySelector("#document-view strong")?.textContent,
-      filename: document.getElementById("filename").textContent,
+      heading: document.querySelector("#app-document h1")?.textContent,
+      strong: document.querySelector("#app-document strong")?.textContent,
+      filename: document.getElementById("app-filename").textContent,
       search: location.search,
       leftover:
         (await cache.match(new URL("__shared-document", location.href).href)) !== undefined,
@@ -257,7 +288,7 @@ try {
   await page.setOfflineMode(true);
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   const offline = await page.evaluate(() => ({
-    button: document.getElementById("open-button")?.textContent,
+    button: document.getElementById("app-open")?.textContent,
     styled: getComputedStyle(document.querySelector(".app-bar")).borderBottomStyle,
   }));
   check("application shell loads offline", offline.button === "Open Markdown");

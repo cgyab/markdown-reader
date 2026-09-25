@@ -166,6 +166,12 @@ body {
   margin-top: 0;
 }
 
+/* Headings are link targets, so keep them clear of the sticky bar when a
+   fragment link scrolls to one. */
+.document :is(h1, h2, h3, h4, h5, h6) {
+  scroll-margin-top: calc(var(--bar-height) + 0.75rem);
+}
+
 .document h1 {
   font-size: 1.75rem;
 }

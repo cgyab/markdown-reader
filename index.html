@@ -13,15 +13,15 @@
   </head>
   <body>
     <header class="app-bar">
-      <button id="open-button" type="button" class="action">Open Markdown</button>
-      <span id="filename" class="filename" aria-live="polite"></span>
-      <button id="print-button" type="button" class="action" disabled>Print</button>
+      <button id="app-open" type="button" class="action">Open Markdown</button>
+      <span id="app-filename" class="filename" aria-live="polite"></span>
+      <button id="app-print" type="button" class="action" disabled>Print</button>
     </header>
 
-    <main id="main" class="page">
-      <p id="error" class="error" role="alert" hidden></p>
+    <main class="page">
+      <p id="app-error" class="error" role="alert" hidden></p>
 
-      <section id="empty-state" class="empty">
+      <section id="app-empty" class="empty">
         <h1>Markdown Reader</h1>
         <p>Open a <code>.md</code> or <code>.markdown</code> file to read it here.</p>
         <p class="empty-note">
@@ -30,7 +30,7 @@
         </p>
       </section>
 
-      <div id="document-view" class="document" hidden></div>
+      <div id="app-document" class="document" hidden></div>
     </main>
 
     <script type="module" src="/src/main.ts"></script>

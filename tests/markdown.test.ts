@@ -25,10 +25,43 @@ test("empty documents render nothing", () => {
 });
 
 test("headings use levels one through six", () => {
-  assert.equal(render("# One"), "<h1>One</h1>");
-  assert.equal(render("###### Six"), "<h6>Six</h6>");
+  assert.equal(render("# One"), '<h1 id="one">One</h1>');
+  assert.equal(render("###### Six"), '<h6 id="six">Six</h6>');
   assert.equal(render("####### Seven"), "<p>####### Seven</p>");
-  assert.equal(render("## Closed ##"), "<h2>Closed</h2>");
+  assert.equal(render("## Closed ##"), '<h2 id="closed">Closed</h2>');
+});
+
+test("headings carry the anchor an author would link to", () => {
+  // The convention people write by hand: lower case, punctuation dropped,
+  // spaces hyphenated.
+  assert.equal(render("# 1. Hard Requirements"), '<h1 id="1-hard-requirements">1. Hard Requirements</h1>');
+  assert.equal(render("## What's *new*?"), '<h2 id="whats-new">What\u2019s <em>new</em>?</h2>'.replace("\u2019", "'"));
+  assert.equal(render("### snake_case and dashes-too"), '<h3 id="snake_case-and-dashes-too">snake_case and dashes-too</h3>');
+  assert.equal(render("## `code` in a heading"), '<h2 id="code-in-a-heading"><code>code</code> in a heading</h2>');
+});
+
+test("repeated headings get distinct anchors", () => {
+  assert.equal(
+    render("## Notes\n\n## Notes\n\n## Notes"),
+    '<h2 id="notes">Notes</h2><h2 id="notes-1">Notes</h2><h2 id="notes-2">Notes</h2>',
+  );
+});
+
+test("a heading with nothing sluggable still gets an anchor", () => {
+  assert.equal(render("## ???"), '<h2 id="section">???</h2>');
+  assert.equal(render("## ???\n\n## !!!"), '<h2 id="section">???</h2><h2 id="section-1">!!!</h2>');
+});
+
+test("an in-document link and its heading meet", () => {
+  const markup = render("[Go](#my-section)\n\n## My Section");
+  assert.equal(markup, '<p><a href="#my-section">Go</a></p><h2 id="my-section">My Section</h2>');
+});
+
+test("headings nested in other blocks are still anchored and still unique", () => {
+  assert.equal(
+    render("> ## Quoted\n\n## Quoted"),
+    '<blockquote><h2 id="quoted">Quoted</h2></blockquote><h2 id="quoted-1">Quoted</h2>',
+  );
 });
 
 test("paragraphs are separated by blank lines and join wrapped lines", () => {
@@ -91,7 +124,7 @@ test("blockquotes contain blocks, including several paragraphs", () => {
     render("> first\n>\n> second"),
     "<blockquote><p>first</p><p>second</p></blockquote>",
   );
-  assert.equal(render("> # quoted"), "<blockquote><h1>quoted</h1></blockquote>");
+  assert.equal(render("> # quoted"), '<blockquote><h1 id="quoted">quoted</h1></blockquote>');
 });
 
 test("horizontal rules", () => {
@@ -199,7 +232,7 @@ test("the specification document renders", () => {
   const markup = html(renderDocument(fakeDom, parsed));
 
   assert.ok(parsed.blocks.length > 100, `only ${parsed.blocks.length} blocks`);
-  assert.ok(markup.includes("<h1>"), "headings");
+  assert.ok(/<h1 id="[^"]+">/.test(markup), "headings, each with an anchor");
   assert.ok(markup.includes("<pre><code"), "fenced code");
   assert.ok(markup.includes("<table>"), "tables");
   assert.ok(markup.includes("<ul>") && markup.includes("<ol>"), "lists");

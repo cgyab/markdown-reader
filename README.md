@@ -255,6 +255,26 @@ code blocks, reference-style links and footnotes, definition lists, raw HTML,
 and autolinks written as `<https://…>` (a bare URL in angle brackets renders as
 text). Leading tabs are expanded to four spaces before parsing.
 
+### Links within a document
+
+Every heading carries an anchor, so a table of contents works:
+
+```markdown
+[Jump to the details](#the-details)
+
+## The details
+```
+
+The slug follows the convention people already write by hand, which is
+GitHub's: lower case, punctuation dropped, spaces hyphenated, so
+`## 1. Hard Requirements` is reachable at `#1-hard-requirements`. A repeated
+heading gets `-1`, `-2` and so on. A destination still has to be a real
+Markdown link — `[x](#My Section)` with an unescaped space is not one, in this
+reader or on GitHub.
+
+The application's own element ids are prefixed `app-` so that a document is
+free to claim any slug it likes without colliding with them.
+
 ## Security
 
 The threat model is small and specific: **the document is the attacker.** A
@@ -283,8 +303,12 @@ exist here.
 - A link URL must be relative or use `http`, `https`, `mailto` or `tel`.
   Everything else — `javascript:`, `vbscript:`, `data:text/html`, `file:`,
   `blob:`, `intent:` — is dropped and the link text kept as plain text.
-- Whitespace and control characters are stripped before the scheme is examined,
-  because browsers ignore them inside one: `java\nscript:` is a live URL.
+- Whitespace and control characters are stripped from a *copy* before the
+  scheme is examined, because browsers ignore them inside one: `java\nscript:`
+  is a live URL. The copy is only ever used for that decision — the URL itself
+  is returned unaltered, since the obfuscation this guards against is entirely
+  about the scheme, and stripping the real value mangled legitimate links such
+  as `<#My Section>`.
 - Images additionally accept `data:image/...` for raster types. SVG is excluded:
   it is an active document type.
 - External links get `target="_blank"` with `rel="noopener noreferrer"`, and

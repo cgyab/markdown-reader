@@ -143,10 +143,15 @@ export function parseInline(source: string): InlineNode[] {
 
 /** Renders an inline tree back to bare text (used for image alt text). */
 export function plainText(source: string): string {
-  return textOf(parseInline(source));
+  return inlineText(parseInline(source));
 }
 
-function textOf(nodes: InlineNode[]): string {
+/**
+ * The visible text of an inline tree, with the markup dropped. Used for image
+ * alt text, the document title and heading anchors, so it lives here rather
+ * than being reimplemented by each caller.
+ */
+export function inlineText(nodes: InlineNode[]): string {
   let text = "";
   for (const node of nodes) {
     switch (node.type) {
@@ -161,7 +166,7 @@ function textOf(nodes: InlineNode[]): string {
         text += " ";
         break;
       default:
-        text += textOf(node.children);
+        text += inlineText(node.children);
     }
   }
   return text;
