@@ -147,9 +147,41 @@ test("links render as anchors and mark external targets", () => {
 
 test("images render as images with alt text", () => {
   assert.equal(
-    render("![a cat](cat.png)"),
-    '<p><img src="cat.png" alt="a cat" loading="lazy"></p>',
+    render("![a cat](https://example.com/cat.png)"),
+    '<p><img src="https://example.com/cat.png" alt="a cat" loading="lazy"></p>',
   );
+  assert.equal(
+    render("![dot](data:image/png;base64,AAAA)"),
+    '<p><img src="data:image/png;base64,AAAA" alt="dot" loading="lazy"></p>',
+  );
+});
+
+test("an image path relative to the document becomes its alt text", () => {
+  // A document opened from disk has no location, so the browser would resolve
+  // these against the reader's own origin and ask its server for them.
+  for (const [markdown, expected] of [
+    ["![Screenshot](images/shot.png)", "<p>Screenshot</p>"],
+    ["![Diagram](./diagrams/arch.png)", "<p>Diagram</p>"],
+    ["![Logo](../assets/logo.png)", "<p>Logo</p>"],
+    ["![Banner](/img/banner.png)", "<p>Banner</p>"],
+  ]) {
+    assert.equal(render(markdown), expected, markdown);
+  }
+});
+
+test("a link relative to the document keeps its text but not its navigation", () => {
+  // Following one would leave the reader and discard the open document.
+  assert.equal(render("[other document](./other.md)"), "<p>other document</p>");
+  assert.equal(render("[root page](/somewhere)"), "<p>root page</p>");
+  assert.equal(render("[sibling](notes.md)"), "<p>sibling</p>");
+
+  // What still works: the document's own headings, and anywhere with a host.
+  assert.equal(render("[top](#local-paths)"), '<p><a href="#local-paths">top</a></p>');
+  assert.equal(
+    render("[out](//example.com/x)"),
+    '<p><a href="//example.com/x">out</a></p>',
+  );
+  assert.equal(render("[mail](mailto:a@b.com)"), '<p><a href="mailto:a@b.com">mail</a></p>');
 });
 
 test("tables render with a head, body and alignment", () => {

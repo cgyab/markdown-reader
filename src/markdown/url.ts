@@ -47,6 +47,32 @@ export function safeImageUrl(raw: string): string | null {
   return safeLinkUrl(url);
 }
 
+/**
+ * True when a URL only means something relative to wherever the document came
+ * from: `images/shot.png`, `./notes.md`, `../logo.png`, `/img/banner.png`.
+ *
+ * A document opened from disk or arriving through a share has no such place.
+ * The browser resolves these against the application's own origin instead,
+ * which is never what the author meant: the request goes to the server hosting
+ * the reader, 404s there, and a relative *link* is worse still — following it
+ * navigates away and discards the document the reader was showing.
+ *
+ * Fragments are excluded: they address the rendered document, which does exist.
+ */
+export function isDocumentRelative(url: string): boolean {
+  const probe = schemeProbe(url.trim());
+  if (probe === "" || probe.startsWith("#")) return false;
+  if (probe.startsWith("//")) return false; // protocol-relative: carries a host
+  return !SCHEME.test(probe);
+}
+
+/** True when a URL names something that can be fetched on its own terms. */
+export function isFetchable(url: string): boolean {
+  const probe = schemeProbe(url.trim());
+  if (probe.startsWith("//")) return true;
+  return SCHEME.test(probe);
+}
+
 /** True for links that leave the application and so need `rel` hardening. */
 export function isExternal(url: string): boolean {
   const scheme = SCHEME.exec(url);

@@ -7,7 +7,7 @@
  */
 
 import type { InlineNode } from "./ast.js";
-import { safeImageUrl, safeLinkUrl } from "./url.js";
+import { isDocumentRelative, isFetchable, safeImageUrl, safeLinkUrl } from "./url.js";
 
 const ASCII_PUNCTUATION = /[!-/:-@[-`{-~]/;
 
@@ -98,10 +98,12 @@ export function parseInline(source: string): InlineNode[] {
       const image = readLink(source, i + 1);
       if (image) {
         const src = safeImageUrl(image.destination);
-        if (src !== null) {
+        if (src !== null && isFetchable(src)) {
           out.node({ type: "image", src, alt: plainText(image.label), title: image.title });
         } else {
-          // Unsafe source: keep the alt text so nothing silently disappears.
+          // Either an unsafe source, or a path relative to a document that has
+          // no location. Keep the alt text: it says what the image was, and
+          // asking the server for a file it has never heard of would not.
           out.push(image.label);
         }
         i = image.end;
@@ -114,10 +116,12 @@ export function parseInline(source: string): InlineNode[] {
       if (link) {
         const href = safeLinkUrl(link.destination);
         const children = parseInline(link.label);
-        if (href !== null) {
+        if (href !== null && !isDocumentRelative(href)) {
           out.node({ type: "link", href, title: link.title, children });
         } else {
-          // Unsafe scheme: the text survives, the navigation does not.
+          // Unsafe scheme, or a path relative to a document with no location.
+          // The text survives; the navigation does not. Following one of these
+          // would leave the reader and throw away the open document.
           for (const child of children) out.node(child);
         }
         i = link.end;

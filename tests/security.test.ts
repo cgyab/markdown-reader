@@ -182,6 +182,34 @@ test("external links are opened without handing over the opener", () => {
   assert.ok(markup.includes('rel="noopener noreferrer"'));
 });
 
+test("no document-relative URL ever reaches the page", () => {
+  // These resolve against the reader's own origin, so each one is a request to
+  // the server hosting the app for a file it has never heard of — and, for a
+  // link, a navigation that discards the open document.
+  const vectors = [
+    "![x](images/shot.png)",
+    "![x](./a.png)",
+    "![x](../b.png)",
+    "![x](/c.png)",
+    "![x](#fragment-as-an-image)",
+    "[x](./other.md)",
+    "[x](/somewhere)",
+    "[x](notes.md)",
+    "[x](?query=1)",
+  ];
+
+  for (const vector of vectors) {
+    assertInert(vector, vector);
+    for (const [tag, name, value] of attributesOf(renderDocument(fakeDom, parseMarkdown(vector)))) {
+      if (name !== "src" && name !== "href") continue;
+      assert.ok(
+        /^(https?:)?\/\/|^(mailto|tel|data):|^#/.test(value),
+        `<${tag} ${name}="${value}"> would be fetched from the reader's own origin: ${vector}`,
+      );
+    }
+  }
+});
+
 test("a heading cannot put anything surprising in its anchor", () => {
   const nasty = [
     '## " onmouseover="alert(1)',

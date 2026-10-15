@@ -255,6 +255,22 @@ code blocks, reference-style links and footnotes, definition lists, raw HTML,
 and autolinks written as `<https://…>` (a bare URL in angle brackets renders as
 text). Leading tabs are expanded to four spaces before parsing.
 
+### Local paths are not followed
+
+A document that references `![shot](images/shot.png)` or `[notes](./other.md)`
+is pointing at files next to itself — but a document opened from disk, or
+arriving through a share, has no "next to itself". The browser would resolve
+those against the reader's own origin, so the request goes to the server
+hosting the app, which has never heard of the file.
+
+So the reader does not emit them. An image becomes its alt text, and a link
+keeps its text without being clickable. Following such a link was the worse
+case: it navigated away from the reader and discarded the open document.
+
+What still works: images with a host (`https://…`, `//host/…`) or a `data:`
+URL, links to anywhere with a host, `mailto:` and `tel:`, and fragments
+pointing at the document's own headings.
+
 ### Links within a document
 
 Every heading carries an anchor, so a table of contents works:
@@ -365,7 +381,9 @@ documents may legitimately reference remote images.
 - A parked document is deleted as it is read, and any document left behind by a
   share that was never opened is purged the next time the app starts. Nothing
   of the user's document remains in storage.
-- The runtime cache only ever stores the application's own files.
+- The runtime cache only ever stores the application's own files, and a failed
+  fetch inside the worker answers with a response rather than letting the
+  rejection escape `respondWith` as an uncaught error.
 
 ### Supply chain
 

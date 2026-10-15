@@ -207,12 +207,20 @@ async function cacheFirst(request: Request): Promise<Response> {
   const cached = await cache.match(request);
   if (cached) return cached;
 
-  const response = await fetch(request);
-  // Only the application's own files are added at runtime. Without the scope
-  // test, a document linking to same-origin URLs could grow the shell cache
-  // with things that are not part of the application.
-  if (response.ok && response.type === "basic" && request.url.startsWith(scope())) {
-    await cache.put(request, response.clone());
+  try {
+    const response = await fetch(request);
+    // Only the application's own files are added at runtime. Without the scope
+    // test, a document linking to same-origin URLs could grow the shell cache
+    // with things that are not part of the application.
+    if (response.ok && response.type === "basic" && request.url.startsWith(scope())) {
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    // The network refused outright — offline, or the host unreachable. Answer
+    // with a response rather than letting the rejection escape `respondWith`,
+    // which surfaces as an uncaught TypeError from inside the worker and tells
+    // the reader nothing it can act on.
+    return new Response("", { status: 504, statusText: "Gateway Timeout" });
   }
-  return response;
 }

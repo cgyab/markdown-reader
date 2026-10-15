@@ -41,6 +41,9 @@ function productionHeaders() {
   ));
 }
 
+/** Paths the page asked for that do not exist. Should stay empty. */
+const missing = [];
+
 function serve(headers) {
   const server = createServer((request, response) => {
     const path = decodeURIComponent(new URL(request.url, BASE).pathname);
@@ -57,6 +60,7 @@ function serve(headers) {
 
     readFile(target, (error, body) => {
       if (error) {
+        missing.push(path);
         response.writeHead(404).end("not found");
         return;
       }
@@ -154,6 +158,23 @@ try {
   check("document produced no dangerous URLs", rendered.badUrls === 0);
   check("external links carry noopener", rendered.opener);
   check("filename is shown", rendered.filename === "TEST.md", rendered.filename);
+
+  // --------------------------------------------------------- local paths
+  // TEST.md references ./icons/icon-192.png, a path relative to a document
+  // that has no location. Rendering it as an <img> would send the reader's own
+  // server a request for a file it has never heard of.
+  const localPaths = await page.evaluate(() => {
+    const view = document.getElementById("app-document");
+    const relative = (url) => url !== null && !/^(https?:)?\/\/|^(mailto|tel|data):|^#/.test(url);
+    return {
+      images: [...view.querySelectorAll("img")].map((i) => i.getAttribute("src")).filter(relative),
+      links: [...view.querySelectorAll("a")].map((a) => a.getAttribute("href")).filter(relative),
+    };
+  });
+  check("no document-relative image reaches the page", localPaths.images.length === 0,
+    localPaths.images.join(", "));
+  check("no document-relative link reaches the page", localPaths.links.length === 0,
+    localPaths.links.join(", "));
 
   // ------------------------------------------------------- in-document links
   // The link half always worked; the anchors it lands on are new. Clicking one
@@ -309,6 +330,9 @@ try {
     (cached ?? []).filter((p) => p.includes("/.")).join(", "));
 
   check("no CSP violations or page errors", problems.length === 0, problems.slice(0, 3).join(" | "));
+  // A document's local paths used to land here as 404s in the server log.
+  check("the server was never asked for a file it does not have", missing.length === 0,
+    [...new Set(missing)].join(", "));
 } finally {
   await browser.close();
   server.close();
